@@ -1,11 +1,28 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity, SafeAreaView, ScrollView} from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, SafeAreaView, Button, Image, Platform} from 'react-native';
 import React, {useState, useEffect} from 'react'; 
 import StepIndicator from 'react-native-step-indicator';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 const {width, height} = Dimensions.get("window");
 const labels = ["Cart","Delivery Address","Order Summary","Cart","Delivery Address","Order Summary"];
+import MapView from 'react-native-maps';
+import * as ImagePicker from 'expo-image-picker';
+import { Searchbar } from 'react-native-paper';
+
+const MyComponent = () => {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const onChangeSearch = query => setSearchQuery(query);
+
+  return (
+    <Searchbar
+      placeholder="Search"
+      onChangeText={onChangeSearch}
+      value={searchQuery}
+    />
+  );
+};
 
 const customStyles = {
   stepIndicatorSize: 25,
@@ -31,11 +48,81 @@ const customStyles = {
   currentStepLabelColor: '#00FFFF'
 }
 
+  
+
+
 
 
 export default function App() {
+  const [search, setSearch] = useState('');
   const [currentPosition, setCurrentPosition] = useState(0); 
-  
+  const [filteredDataSource, setFilteredDataSource] = useState([]);
+  const [masterDataSource, setMasterDataSource] = useState([]);
+
+  useEffect(() => {
+    fetch('https://jsonplaceholder.typicode.com/posts')
+      .then((response) => response.json())
+      .then((responseJson) => {
+        setFilteredDataSource(responseJson);
+        setMasterDataSource(responseJson);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
+
+  const searchFilterFunction = (text) => {
+    // Check if searched text is not blank
+    if (text) {
+      // Inserted text is not blank
+      // Filter the masterDataSource
+      // Update FilteredDataSource
+      const newData = masterDataSource.filter(function (item) {
+        const itemData = item.title
+          ? item.title.toUpperCase()
+          : ''.toUpperCase();
+        const textData = text.toUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredDataSource(newData);
+      setSearch(text);
+    } else {
+      // Inserted text is blank
+      // Update FilteredDataSource with masterDataSource
+      setFilteredDataSource(masterDataSource);
+      setSearch(text);
+    }
+  };
+
+  const ItemView = ({ item }) => {
+    return (
+      // Flat List Item
+      <Text style={styles.itemStyle} onPress={() => getItem(item)}>
+        {item.id}
+        {'.'}
+        {item.title.toUpperCase()}
+      </Text>
+    );
+  };
+
+  const ItemSeparatorView = () => {
+    return (
+      // Flat List Item Separator
+      <View
+        style={{
+          height: 0.5,
+          width: '100%',
+          backgroundColor: '#C8C8C8',
+        }}
+      />
+    );
+  };
+
+  const getItem = (item) => {
+    // Function for click on an item
+    alert('Id : ' + item.id + ' Title : ' + item.title);
+  };
+
   const nextStep = () => {
     if (currentPosition < 5) {
       setCurrentPosition(currentPosition + 1)
@@ -47,7 +134,23 @@ export default function App() {
       setCurrentPosition(currentPosition - 1)
     }
   }
+  const [image, setImage] = useState(null);
 
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    console.log(result);
+
+    if (!result.cancelled) {
+      setImage(result.uri);
+    }
+  };
   const data = [
     {
         label: 'Started Investigation', 
@@ -86,6 +189,7 @@ export default function App() {
 
 
   ];
+
 
   function TimeLineScreen() {
   return (
@@ -129,13 +233,40 @@ export default function App() {
   );
 }
 
-function SettingsScreen() {
+function MapScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Settings!</Text>
+      <View style={styles.container_map}>
+      <MapView style={styles.map} />
+        </View>
     </View>
   );
 }
+
+function imagePicker() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <Button title="Pick an image from camera roll" onPress={pickImage} />
+      {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
+    </View>
+  );
+}
+
+function searchBar() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+     <Searchbar
+          round
+          searchIcon={{ size: 24 }}
+          onChangeText={(text) => searchFilterFunction(text)}
+          onClear={(text) => searchFilterFunction('')}
+          placeholder="Type Here..."
+          value={search}
+        />
+    </View>
+  );
+}
+
 
 const Tab = createBottomTabNavigator();
   console.disableYellowBox = true; 
@@ -146,8 +277,9 @@ const Tab = createBottomTabNavigator();
         <NavigationContainer>
         <Tab.Navigator>
           <Tab.Screen name="TimeLine" component={TimeLineScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
-
+          <Tab.Screen name="Maps" component={MapScreen} />
+          <Tab.Screen name="ImagePicker" component={imagePicker} />
+          <Tab.Screen name="Search" component={searchBar} />
         </Tab.Navigator>
         </NavigationContainer>
     </View>
@@ -156,6 +288,16 @@ const Tab = createBottomTabNavigator();
 }
 
 const styles = StyleSheet.create({
+  container_map: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  map: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
   container: {
     flex: 1,
     backgroundColor : '#000',
