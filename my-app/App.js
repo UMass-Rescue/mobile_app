@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity, SafeAreaView, Button, Image, Platform} from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, SafeAreaView, Button, Image, Platform, RefreshControl,
+  ActivityIndicator} from 'react-native';
 import React, {useState, useEffect} from 'react'; 
 import StepIndicator from 'react-native-step-indicator';
 import { NavigationContainer } from '@react-navigation/native';
@@ -9,6 +10,8 @@ const labels = ["Cart","Delivery Address","Order Summary","Cart","Delivery Addre
 import MapView from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import { Searchbar } from 'react-native-paper';
+import { Audio } from 'expo-av';
+import Timeline from 'react-native-timeline-flatlist'
 
 const MyComponent = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -23,6 +26,8 @@ const MyComponent = () => {
     />
   );
 };
+
+
 
 const customStyles = {
   stepIndicatorSize: 25,
@@ -48,9 +53,6 @@ const customStyles = {
   currentStepLabelColor: '#00FFFF'
 }
 
-  
-
-
 
 
 export default function App() {
@@ -58,7 +60,23 @@ export default function App() {
   const [currentPosition, setCurrentPosition] = useState(0); 
   const [filteredDataSource, setFilteredDataSource] = useState([]);
   const [masterDataSource, setMasterDataSource] = useState([]);
+  const [recording, setRecording] = useState(); 
 
+
+  //Live Tracking
+  const [state, setState] = useState({
+    pickupCords: {
+      latitude: 42.3732, 
+      longitude: -72.5199
+    }, 
+
+    dropLocationCords:{
+      latitude: 42.3601,
+      longitude: -71.0589
+    }
+  })
+
+  const {pickupCords, dropLocationCords} = state
   useEffect(() => {
     fetch('https://jsonplaceholder.typicode.com/posts')
       .then((response) => response.json())
@@ -71,6 +89,35 @@ export default function App() {
       });
   }, []);
 
+  //recording function 
+  async function startRecording(){
+    try{
+      console.log('Requesting submission...'); 
+      await Audio.requestPermissionsAsync(); 
+      await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true, 
+          playsInSilentModeIOS: true, 
+      }); 
+      console.log('Start Recording'); 
+      const recording = new Audio.Recording(); 
+      await recording.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY)
+      await recording.startAsync(); 
+      setRecording(recording); 
+      console.log('Recording started'); 
+    } catch(err){
+      console.error('Failed to start recording', err);
+    }
+  } 
+
+  async function stopRecording(){
+    console.log('Stoppping recording...'); 
+    setRecording(undefined); 
+    await recording.stopAndUnloadAsync(); 
+    const uri = recording.getURI(); 
+    console.log('Recording stopped and stored at', uri);
+  }
+
+  //Search Bar Check 
   const searchFilterFunction = (text) => {
     // Check if searched text is not blank
     if (text) {
@@ -151,93 +198,63 @@ export default function App() {
       setImage(result.uri);
     }
   };
-  const data = [
-    {
-        label: 'Started Investigation', 
-        status : 'Notes about this',
-        dateTime: 'Sat, 3rd Nov 11:49pm',
-    },
-    {
-      label: 'Middle Investigation', 
-      status : 'Notes about this',
-      dateTime: 'Sun, 4th Nov 1:00am',
-   },
+ 
 
-    {
-      label: 'More Investigation', 
-      status : 'Notes about this',
-      dateTime: 'Friday, 16th Nov 1:00pm',
+  const data_test = [
 
-    },
-    {
-      label: 'Penultimate Investigation', 
-      status : 'Notes about this',
-      dateTime: 'Sat, 20th Nov 11:49pm',
-  },
-  {
-    label: 'End Investigation', 
-    status : 'Notes about this',
-    dateTime: 'Sun, 29th Nov 1:00am',
- },
+      {time: '09:00', title: 'Event 1', description: 'Event 1 Description'},
+      {time: '10:45', title: 'Event 2', description: 'Event 2 Description'},
+      {time: '12:00', title: 'Event 3', description: 'Event 3 Description'},
+      {time: '14:00', title: 'Event 4', description: 'Event 4 Description'},
+      {time: '16:30', title: 'Event 5', description: 'Event 5 Description'}, 
+      {time: '09:05', title: 'Event 1', description: 'Event 1 Description'},
+      {time: '10:55', title: 'Event 2', description: 'Event 2 Description'},
+      {time: '12:10', title: 'Event 3', description: 'Event 3 Description'},
+      {time: '14:10', title: 'Event 4', description: 'Event 4 Description'},
+      {time: '16:40', title: 'Event 5', description: 'Event 5 Description'}, 
+      {time: '09:15', title: 'Event 1', description: 'Event 1 Description'},
+      {time: '11:35', title: 'Event 2', description: 'Event 2 Description'},
+      {time: '12:40', title: 'Event 3', description: 'Event 3 Description'},
+      {time: '14:30', title: 'Event 4', description: 'Event 4 Description'},
+      {time: '16:60', title: 'Event 5', description: 'Event 5 Description'}
 
-  {
-    label: 'End Investigation', 
-    status : 'Notes about this',
-    dateTime: 'Friday, 16th Nov 1:00pm',
-
-  },
+  ]; 
 
 
-  ];
 
 
   function TimeLineScreen() {
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <StatusBar backgroundColor="#000" barStyle="light-content"/>
-        <View style={styles.header}>
-            <Text style={styles.headerText}>
-              TimeLine
-            </Text>
-        </View>
-        <View style={styles.indicatorContainer}>
-              <StepIndicator
-              customStyles={customStyles}
-              currentPosition={currentPosition}
-              labels={labels}
-              direction = "vertical"
-              renderLabel={({position, stepStaus, label, crntPosition})  => {
-                return (
-                  <View style = {styles.lblContainer}>  
-                      <Text style={styles.lblText}>{data[position].label}</Text>
-                      <Text style={styles.lblNotes}>{data[position].status}</Text>
-                      <Text style={styles.lblNotes}>{data[position].dateTime}</Text>
-                  </View>
-                )
-              }} 
-          />
-          <TouchableOpacity style={styles.nextBtn} onPress={() => nextStep()}>
-            <Text style={styles.text}> 
-              Next
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.backBtn} onPress={() => backStep()}>
-            <Text style={styles.text}> 
-              Back
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <View style={{ flex: 1}}>
+      <Timeline
+          data={data_test}
+          circleSize={20}
+          circleColor='rgb(45,156,219)'
+          lineColor='rgb(45,156,219)'
+          timeContainerStyle={{minWidth:52, marginTop: -5}}
+          timeStyle={{textAlign: 'center', backgroundColor:'#ff9797', color:'white', padding:5, borderRadius:13}}
+          descriptionStyle={{color:'gray'}}
+          options={{
+            style:{paddingTop:5}
+          }}
+          isUsingFlatlist={true}
+        />
      </View>
-    </SafeAreaView>
   );
 }
 
 function MapScreen() {
+  
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
       <View style={styles.container_map}>
-      <MapView style={styles.map} />
+      <MapView initialRegion={{
+      latitude: 37.78825,
+      longitude: -122.4324,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    }}style={styles.map} />
         </View>
     </View>
   );
@@ -267,7 +284,16 @@ function searchBar() {
   );
 }
 
-
+function interview() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    <Button
+      title={recording ? 'Stop recording' : 'Start Recording'}
+      onPress = {recording ? stopRecording: startRecording}
+    />
+    </View>
+  );
+}
 const Tab = createBottomTabNavigator();
   console.disableYellowBox = true; 
   return (
@@ -276,6 +302,7 @@ const Tab = createBottomTabNavigator();
       
         <NavigationContainer>
         <Tab.Navigator>
+         <Tab.Screen name="Interview" component={interview} />
           <Tab.Screen name="TimeLine" component={TimeLineScreen} />
           <Tab.Screen name="Maps" component={MapScreen} />
           <Tab.Screen name="ImagePicker" component={imagePicker} />
