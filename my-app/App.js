@@ -12,6 +12,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Searchbar } from 'react-native-paper';
 import { Audio } from 'expo-av';
 import Timeline from 'react-native-timeline-flatlist'
+import * as FileSystem from "expo-file-system";
+import Splash from './overrideRenderExample'
 
 const MyComponent = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -61,7 +63,7 @@ export default function App() {
   const [filteredDataSource, setFilteredDataSource] = useState([]);
   const [masterDataSource, setMasterDataSource] = useState([]);
   const [recording, setRecording] = useState(); 
-
+  
 
   //Live Tracking
   const [state, setState] = useState({
@@ -89,34 +91,7 @@ export default function App() {
       });
   }, []);
 
-  //recording function 
-  async function startRecording(){
-    try{
-      console.log('Requesting submission...'); 
-      await Audio.requestPermissionsAsync(); 
-      await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true, 
-          playsInSilentModeIOS: true, 
-      }); 
-      console.log('Start Recording'); 
-      const recording = new Audio.Recording(); 
-      await recording.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY)
-      await recording.startAsync(); 
-      setRecording(recording); 
-      console.log('Recording started'); 
-    } catch(err){
-      console.error('Failed to start recording', err);
-    }
-  } 
-
-  async function stopRecording(){
-    console.log('Stoppping recording...'); 
-    setRecording(undefined); 
-    await recording.stopAndUnloadAsync(); 
-    const uri = recording.getURI(); 
-    console.log('Recording stopped and stored at', uri);
-  }
-
+ 
   //Search Bar Check 
   const searchFilterFunction = (text) => {
     // Check if searched text is not blank
@@ -199,46 +174,12 @@ export default function App() {
     }
   };
  
-
-  const data_test = [
-
-      {time: '09:00', title: 'Event 1', description: 'Event 1 Description'},
-      {time: '10:45', title: 'Event 2', description: 'Event 2 Description'},
-      {time: '12:00', title: 'Event 3', description: 'Event 3 Description'},
-      {time: '14:00', title: 'Event 4', description: 'Event 4 Description'},
-      {time: '16:30', title: 'Event 5', description: 'Event 5 Description'}, 
-      {time: '09:05', title: 'Event 1', description: 'Event 1 Description'},
-      {time: '10:55', title: 'Event 2', description: 'Event 2 Description'},
-      {time: '12:10', title: 'Event 3', description: 'Event 3 Description'},
-      {time: '14:10', title: 'Event 4', description: 'Event 4 Description'},
-      {time: '16:40', title: 'Event 5', description: 'Event 5 Description'}, 
-      {time: '09:15', title: 'Event 1', description: 'Event 1 Description'},
-      {time: '11:35', title: 'Event 2', description: 'Event 2 Description'},
-      {time: '12:40', title: 'Event 3', description: 'Event 3 Description'},
-      {time: '14:30', title: 'Event 4', description: 'Event 4 Description'},
-      {time: '16:60', title: 'Event 5', description: 'Event 5 Description'}
-
-  ]; 
-
-
-
-
+ 
   function TimeLineScreen() {
 
   return (
       <View style={{ flex: 1}}>
-      <Timeline
-          data={data_test}
-          circleSize={20}
-          circleColor='rgb(45,156,219)'
-          lineColor='rgb(45,156,219)'
-          timeContainerStyle={{minWidth:52, marginTop: -5}}
-          timeStyle={{textAlign: 'center', backgroundColor:'#ff9797', color:'white', padding:5, borderRadius:13}}
-          descriptionStyle={{color:'gray'}}
-          options={{
-            style:{paddingTop:5}
-          }}
-          isUsingFlatlist={true}
+      <Splash
         />
      </View>
   );
@@ -285,12 +226,89 @@ function searchBar() {
 }
 
 function interview() {
+  const [recording, setRecording] = React.useState();
+  const [recordings, setRecordings] = React.useState([]);
+  const [message, setMessage] = React.useState("");
+  const [text, setText] = React.useState("");
+  const FLASK_BACKEND = "http://your-flask-ip:5000/audio";
+
+  async function startRecording() {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+
+      if (permission.status === "granted") {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true
+        });
+        
+        const { recording } = await Audio.Recording.createAsync({
+          android: {
+            extension: ".mp4",
+            audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+            outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+          },
+          ios: {
+            extension: ".wav",
+            sampleRate: 44100,
+            numberOfChannels: 2,
+            bitRate: 128000,
+            audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
+            outputFormat: Audio.RECORDING_OPTION_IOS_OUTPUT_FORMAT_LINEARPCM,
+          },
+        });
+
+        setRecording(recording);
+      } else {
+        setMessage("Please grant permission to app to access microphone");
+      }
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  }
+
+  async function stopRecording() {
+    setRecording(undefined);
+    await recording.stopAndUnloadAsync();
+
+    let updatedRecordings = [...recordings];
+    const { sound, status } = await recording.createNewLoadedSoundAsync();
+    updatedRecordings.push({
+      sound: sound,
+      duration: getDurationFormatted(status.durationMillis),
+      file: recording.getURI()
+    });
+    const uri = recording.getURI(); 
+    console.log('Recording stopped and stored at', uri);
+    setRecordings(updatedRecordings);
+  }
+
+  function getDurationFormatted(millis) {
+    const minutes = millis / 1000 / 60;
+    const minutesDisplay = Math.floor(minutes);
+    const seconds = Math.round((minutes - minutesDisplay) * 60);
+    const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds;
+    return `${minutesDisplay}:${secondsDisplay}`;
+  }
+
+  function getRecordingLines() {
+    return recordings.map((recordingLine, index) => {
+      return (
+        <View key={index} style={styles.row}>
+          <Text style={styles.fill}>Recording {index + 1} - {recordingLine.duration}</Text>
+          <Button style={styles.button} onPress={() => recordingLine.sound.replayAsync()} title="Play"></Button>
+        </View>
+      );
+    });
+  }
+
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
     <Button
-      title={recording ? 'Stop recording' : 'Start Recording'}
-      onPress = {recording ? stopRecording: startRecording}
-    />
+      title={recording ? 'Stop Recording' : 'Start Recording'}
+        onPress={recording ? stopRecording : startRecording} />
+      {getRecordingLines()}
+      <StatusBar style="auto" />
     </View>
   );
 }
