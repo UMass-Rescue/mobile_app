@@ -11,9 +11,25 @@ import MapView from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import { Searchbar } from 'react-native-paper';
 import { Audio } from 'expo-av';
-import Timeline from 'react-native-timeline-flatlist'
 import * as FileSystem from "expo-file-system";
-import Splash from './overrideRenderExample'
+import TimeLineRender from './overrideRenderExample'
+import { EAzureBlobStorageFile } from 'react-native-azure-blob-storage';
+
+import axios from "axios";
+import { v4 as uuid } from "uuid";
+
+
+// const { BlobServiceClient } = require("@azure/storage-blob");
+
+// const server_url = "http://localhost:8000/";
+// const example_worker_endpoint = server_url + "predict_worker_example/";
+
+// const blobSasUrl =
+//   "https://jagathrescue.blob.core.windows.net/596e-backend?...";
+// const blobContainer = "596e-backend";
+// const blob_credential = "sp=racwdli&st=2022-03-02T18:39:33Z&se=2022-06-02T01:39:33Z&spr=https&sv=2020-08-04&sr=c&sig=7hdLnsjVUTPNmfzV2RJBkZdUP%2BrkVKrWlcEibwvKeIA%3D"
+// const blobServiceClient = new BlobServiceClient(blobSasUrl);
+// const containerClient = blobServiceClient.getContainerClient(blobContainer);
 
 const MyComponent = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -179,7 +195,7 @@ export default function App() {
 
   return (
       <View style={{ flex: 1}}>
-      <Splash
+      <TimeLineRender
         />
      </View>
   );
@@ -230,7 +246,10 @@ function interview() {
   const [recordings, setRecordings] = React.useState([]);
   const [message, setMessage] = React.useState("");
   const [text, setText] = React.useState("");
-  const FLASK_BACKEND = "http://your-flask-ip:5000/audio";
+  const FLASK_BACKEND = "http://127.0.0.1:8000";
+  const [transcriptScripts, setTranscriptScripts] = useState(["Transcript"]);
+
+
 
   async function startRecording() {
     try {
@@ -268,19 +287,40 @@ function interview() {
   }
 
   async function stopRecording() {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+    });
+
     setRecording(undefined);
     await recording.stopAndUnloadAsync();
 
     let updatedRecordings = [...recordings];
     const { sound, status } = await recording.createNewLoadedSoundAsync();
-    updatedRecordings.push({
+    var r_ = {
       sound: sound,
       duration: getDurationFormatted(status.durationMillis),
       file: recording.getURI()
-    });
+    }
+    console.log(r_)
+    updatedRecordings.push(
+      r_
+    );
     const uri = recording.getURI(); 
     console.log('Recording stopped and stored at', uri);
     setRecordings(updatedRecordings);
+    try {
+      const response = await FileSystem.uploadAsync(
+        FLASK_BACKEND,
+        uri
+      );
+      const body = JSON.parse(response.body);
+      setText(body.text);
+    } catch (err) {
+      console.error(err);
+      console.log('Flask Did not Work');
+    }
+    setTranscriptScripts(transcriptScripts => [...transcriptScripts, "Transcript"])
+
   }
 
   function getDurationFormatted(millis) {
@@ -292,10 +332,80 @@ function interview() {
   }
 
   function getRecordingLines() {
+    //const [transcription, setTranscription] = useState("Transcribe interview by clicking transcribe button");
+    const [numbers, setnumbers] = useState([0]);
+
+    async function componentDidMount() {
+      EAzureBlobStorageFile.configure(
+        "https://jagathrescue.blob.core.windows.net/596e-backend", //Account Name
+        "sp=racwdli&st=2022-03-02T18:39:33Z&se=2022-06-02T01:39:33Z&spr=https&sv=2020-08-04&sr=c&sig=7hdLnsjVUTPNmfzV2RJBkZdUP%2BrkVKrWlcEibwvKeIA%3D", //Account Key
+        "596e-backend", //Container Name
+         false //SAS Token 
+      );
+    }
+    async function transcribeRecording(index){
+      transcriptScripts[index] = "This is where the transcription will go"
+      //const blob_key = uuid();
+      //const blockBlobClient = containerClient.getBlockBlobClient(blob_key);
+      
+      console.log(recordings[index])
+      //console.log(blob_key)
+
+
+      const data = new FormData();
+      //data.append('audioObject', new Blob([recordings[index]]));
+      console.log(typeof(data))
+     // await blockBlobClient.upload(Buffer.from(data));
+
+    console.log("Before Audio File")
+    console.log(recordings[index]['file'])
+    console.log("After Audio File")
+
+
+    componentDidMount().then(r => {
+       console.log(r);
+        console.log("Sucessful Upload");
+        ///absolute filepath needed for ios
+        var name = EAzureBlobStorageFile.uploadFile(recordings[index]['file'])
+      })
+      .catch((err) => {
+        console.log("ERROR");
+        console.log(err);
+      });
+    
+    
+      // axios
+      // .post(example_worker_endpoint, {
+      //   blob_key: blob_key,
+      // })
+      // .then((response) => {
+      //   console.log(response.data);
+      //   transcriptScripts[index] = JSON.stringify(response.data);
+      // });
+
+
+      console.log(index)
+      setnumbers(numbers => [...numbers, index]);
+      //setTranscription("This is where the transcription will go");
+    }
     return recordings.map((recordingLine, index) => {
+   
+
       return (
         <View key={index} style={styles.row}>
-          <Text style={styles.fill}>Recording {index + 1} - {recordingLine.duration}</Text>
+          
+          <View style={{ flexDirection: "row" ,marginLeft: 20, justifyContent: 'space-evenly' }}>
+            <Text style={styles.fill}>Recording {index + 1} - {recordingLine.duration} </Text>
+            <Button style={styles.button_transcribe} onPress={() => transcribeRecording(index)} title="Transcribe"></Button>
+           </View>
+           <Text style={styles.titleText}>
+              {"\n"}
+              {transcriptScripts[index]}
+              {"\n"}
+              {numbers[index]}
+              {"\n"}
+              {"\n"}
+            </Text>
           <Button style={styles.button} onPress={() => recordingLine.sound.replayAsync()} title="Play"></Button>
         </View>
       );
@@ -318,7 +428,7 @@ const Tab = createBottomTabNavigator();
 
     <View style={styles.container}>
       
-        <NavigationContainer>
+         <NavigationContainer>
         <Tab.Navigator>
          <Tab.Screen name="Interview" component={interview} />
           <Tab.Screen name="TimeLine" component={TimeLineScreen} />
@@ -326,13 +436,22 @@ const Tab = createBottomTabNavigator();
           <Tab.Screen name="ImagePicker" component={imagePicker} />
           <Tab.Screen name="Search" component={searchBar} />
         </Tab.Navigator>
-        </NavigationContainer>
+        </NavigationContainer> 
     </View>
     
   );
 }
 
 const styles = StyleSheet.create({
+  button_transcribe: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 4,
+    elevation: 3,
+    backgroundColor: 'red',
+  },
   container_map: {
     flex: 1,
     backgroundColor: '#fff',

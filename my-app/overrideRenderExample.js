@@ -3,84 +3,91 @@ import {
   StyleSheet,
   Text,
   View,
-  Image
+  Image, 
+  Button, 
+  TouchableOpacity,
+  TextInput
 } from 'react-native';
 import Timeline from 'react-native-timeline-flatlist'
+import Modal from "react-native-modal";
+import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native-web';
 
 
-    data = [
+
+   const data = [
       {
         time: '09:00', 
-        title: 'Archery Training', 
-        description: 'The Beginner Archery and Beginner Crossbow course does not require you to bring any equipment, since everything you need will be provided for the course. ',
+        title: 'First Event', 
+        description: 'Notes about the first Event ',
         lineColor:'#009688', 
         //icon: require('../img/archery.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240340/c0f96b3a-0fe3-11e7-8964-fe66e4d9be7a.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       },
       {
         time: '10:45', 
-        title: 'Play Badminton', 
-        description: 'Badminton is a racquet sport played using racquets to hit a shuttlecock across a net.', 
+        title: 'Second Event', 
+        description: 'Notes about the Second Event ', 
        // icon: require('../img/badminton.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240405/0ba41234-0fe4-11e7-919b-c3f88ced349c.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       },
       {
         time: '12:00', 
-        title: 'Lunch', 
+        title: 'Event', 
        // icon: require('../img/lunch.png'),
       },
       {
         time: '14:00', 
-        title: 'Watch Soccer', 
-        description: 'Team sport played between two teams of eleven players with a spherical ball. ',
+        title: 'Third Event', 
+        description: 'Notes about the third Event  ',
         lineColor:'#009688', 
        // icon: require('../img/soccer.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240419/1f553dee-0fe4-11e7-8638-6025682232b1.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       },
       {
         time: '16:30', 
-        title: 'Go to Fitness center', 
-        description: 'Look out for the Best Gym & Fitness Centers around me :)', 
+        title: 'Fourth Event', 
+        description: 'Notes about the fourth Event ', 
        //icon: require('../img/dumbbell.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240422/20d84f6c-0fe4-11e7-8f1d-9dbc594d0cfa.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       }, 
       {
         time: '09:10', 
-        title: 'Archery Training', 
-        description: 'The Beginner Archery and Beginner Crossbow course does not require you to bring any equipment, since everything you need will be provided for the course. ',
+        title: 'Fifth Event', 
+        description: 'Notes about the fifth Event ',
         lineColor:'#009688', 
         //icon: require('../img/archery.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240340/c0f96b3a-0fe3-11e7-8964-fe66e4d9be7a.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       },
       {
         time: '10:55', 
-        title: 'Play Badminton', 
-        description: 'Badminton is a racquet sport played using racquets to hit a shuttlecock across a net.', 
+        title: 'Sixth Event', 
+        description: 'Notes about the sixth Event ', 
        // icon: require('../img/badminton.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240405/0ba41234-0fe4-11e7-919b-c3f88ced349c.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       },
       {
         time: '12:10', 
-        title: 'Lunch', 
+        title: 'Event', 
        // icon: require('../img/lunch.png'),
       },
       {
         time: '14:10', 
-        title: 'Watch Soccer', 
-        description: 'Team sport played between two teams of eleven players with a spherical ball. ',
+        title: 'Seventh Event', 
+        description: 'Notes about the seventh Event  ',
         lineColor:'#009688', 
        // icon: require('../img/soccer.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240419/1f553dee-0fe4-11e7-8638-6025682232b1.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       },
       {
         time: '16:40', 
-        title: 'Go to Fitness center', 
-        description: 'Look out for the Best Gym & Fitness Centers around me :)', 
+        title: 'Eigth Event', 
+        description: 'Notes about the eighth Event ', 
        //icon: require('../img/dumbbell.png'),
-        imageUrl: 'https://cloud.githubusercontent.com/assets/21040043/24240422/20d84f6c-0fe4-11e7-8f1d-9dbc594d0cfa.jpg'
+        imageUrl: 'https://www.filepicker.io/api/file/4C6yPDywSUeWYLyg1h9G'
       }
     ]
-    state = {selected: null}
+   const state = {selected: null}
   
 /*
   const onEventPress = (data) =>  {
@@ -111,10 +118,88 @@ import Timeline from 'react-native-timeline-flatlist'
       </View>
     )
   }
-export default function Splash(){
+export default function TimeLineRender(){
+  const [showModal, stateModal] = React.useState(false);
+  const [isModalVisible, setModalVisible] = React.useState(false);
+  const [titleChange, onChangetitle] = React.useState(null);
+  const [detailChange, onChangeDetail] = React.useState(null);
+  const [timeChange, onChangeTime] = React.useState(null);
+  const [image, setImage] = React.useState(null);
+
+  const addEvent = () => {
+    if(detailChange && timeChange && image){
+      data.push({
+        time: timeChange, 
+        title: titleChange, 
+        description: detailChange,
+        lineColor:'#009688', 
+        //icon: require('../img/archery.png'),
+        imageUrl: 'https://images.unsplash.com/photo-1534270804882-6b5048b1c1fc?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8bmV3fGVufDB8fDB8fA%3D%3D&w=1000&q=80'
+      });
+    }
+    else{
+      Alert.alert("Error", "Fields Must Not Be Empty!")
+    }
+  }
+const pickimage = async () => {
+  // No permissions request is necessary for launching the image library
+  let result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.All,
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 1,
+  });
+
+  console.log(result);
+
+  if (!result.cancelled) {
+    setImage(result.uri);
+  }
+};
+
+
+  const toggleModal = () => {
+    setModalVisible(!isModalVisible);
+  };
+
     return (
+      
       <View style={styles.container}>
+          {showModal ? (<View style={{ flex: 1 }}>
+              <TextInput
+          style={styles.input}
+          onChangeText={onChangetitle}
+          value={titleChange}
+          placeholder="Event Title"
+        />
+          <TextInput
+          style={styles.input}
+          onChangeText={onChangeDetail}
+          value={detailChange}
+          placeholder="Event Details"
+        />
+        <TextInput
+          style={styles.input}
+          onChangeText={onChangeTime}
+          value={timeChange}
+          placeholder="Time"
+        />
+             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Button title="Pick an image from camera roll" onPress={pickimage} />
+              {image && <Image source={{ uri: image }} style={{ width: 300, height: 300 }} />}
+            </View>
+
+          <TouchableOpacity onPress={() => addEvent()}>
+            <Text>Add Event to Timeline</Text>
+          </TouchableOpacity>
+      
+          <Button title="Show modal" onPress={toggleModal} />
+
+        </View>
+        ) : null}
+
         {renderSelected()}
+        <Button title="Add Event"  onPress={() => stateModal(!showModal)}/>
         <Timeline 
           style={styles.list}
           data={data}
@@ -127,13 +212,36 @@ export default function Splash(){
           options={{
             style:{paddingTop:5}
           }}
-          onEventPress={(item) =>
-          alert(`${item.title} at ${item.time}`)
-        }
+
+          onEventPress={toggleModal}
+          
           innerCircle={'icon'}
           //onEventPress={onEventPress}
           renderDetail={renderDetail}
+          columnFormat='single-column-right'
+          detailContainerStyle={{marginBottom: 20, paddingLeft: 5, paddingRight: 5, backgroundColor: "#BBDAFF", borderRadius: 10}}
         />
+          <Modal isVisible={isModalVisible}>
+            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center',backgroundColor: '#9FA8DA' }}>
+            <Text>Title: </Text>
+            <Text>Details: </Text>
+            <Text>Time: </Text>
+            <View style={{ flex: 1 }}> 
+            <Image
+              source={{
+                uri: 'https://reactnative.dev/img/tiny_logo.png',
+              }}
+            />
+            </View>
+           
+              <Button title="Hide modal" onPress={toggleModal} />
+            </View>
+             
+            </View>
+          </Modal>
+      
+
       </View>
     );
 }
