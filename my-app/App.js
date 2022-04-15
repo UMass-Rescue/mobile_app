@@ -334,15 +334,8 @@ function interview() {
   function getRecordingLines() {
     //const [transcription, setTranscription] = useState("Transcribe interview by clicking transcribe button");
     const [numbers, setnumbers] = useState([0]);
+ 
 
-    async function componentDidMount() {
-      EAzureBlobStorageFile.configure(
-        "https://jagathrescue.blob.core.windows.net/596e-backend", //Account Name
-        "sp=racwdli&st=2022-03-02T18:39:33Z&se=2022-06-02T01:39:33Z&spr=https&sv=2020-08-04&sr=c&sig=7hdLnsjVUTPNmfzV2RJBkZdUP%2BrkVKrWlcEibwvKeIA%3D", //Account Key
-        "596e-backend", //Container Name
-         false //SAS Token 
-      );
-    }
     async function transcribeRecording(index){
       transcriptScripts[index] = "This is where the transcription will go"
       //const blob_key = uuid();
@@ -361,28 +354,20 @@ function interview() {
     console.log(recordings[index]['file'])
     console.log("After Audio File")
 
-
-    componentDidMount().then(r => {
-       console.log(r);
-        console.log("Sucessful Upload");
-        ///absolute filepath needed for ios
-        var name = EAzureBlobStorageFile.uploadFile(recordings[index]['file'])
-      })
-      .catch((err) => {
-        console.log("ERROR");
-        console.log(err);
-      });
+    useEffect(() => {
+      EAzureBlobStorageFile.configure(
+        "https://jagathrescue.blob.core.windows.net/596e-backend", //Account Name
+        "sp=racwdli&st=2022-03-02T18:39:33Z&se=2022-06-02T01:39:33Z&spr=https&sv=2020-08-04&sr=c&sig=7hdLnsjVUTPNmfzV2RJBkZdUP%2BrkVKrWlcEibwvKeIA%3D", //Account Key
+        "596e-backend", //Container Name
+         false //SAS Token 
+      )
+   
+    }, []); 
+   
     
-    
-      // axios
-      // .post(example_worker_endpoint, {
-      //   blob_key: blob_key,
-      // })
-      // .then((response) => {
-      //   console.log(response.data);
-      //   transcriptScripts[index] = JSON.stringify(response.data);
-      // });
-
+    console.log(recordings[index]['file']);
+    console.log("Sucessful Upload");
+    EAzureBlobStorageFile.uploadFile(recordings[index]['file'])
 
       console.log(index)
       setnumbers(numbers => [...numbers, index]);
